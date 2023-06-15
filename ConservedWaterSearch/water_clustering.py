@@ -23,7 +23,6 @@ from ConservedWaterSearch.utils import (
     visualise_pymol,
 )
 
-
 class WaterClustering:
     """Class for performing water clustering.
 
@@ -822,6 +821,7 @@ class WaterClustering:
         self,
         fname: str = "Clustering_results.dat",
         typefname: str = "Type_Clustering_results.dat",
+        pdbfname: str = "Clustering_results.pdb",
     ) -> None:
         """Saves clustering results to files. Water coordinates are
         saved into the ``fname`` and water types are saved into the
@@ -841,6 +841,26 @@ class WaterClustering:
             np.savetxt(fname, np.c_[self._waterO, self._waterH1, self._waterH2])
         np.savetxt(typefname, np.c_[self._water_type], fmt="%s")
 
+        from openmm.app.pdbfile import PDBFile
+        from openmm.app.topology import Topology
+        from openmm.app.element import Element
+        topology = Topology()
+        chain = topology.addChain()
+        positions=[]
+        for opos, h1pos, h2pos in zip(self._waterO, self._waterH1, self._waterH2):
+            residue = topology.addResidue("SOL", chain)
+            element_O = Element.getByAtomicNumber(8)
+            element_H = Element.getByAtomicNumber(1)
+            atom0 = topology.addAtom("OW", element_O, residue)
+            atom1 = topology.addAtom("HW1", element_H, residue)
+            atom2 = topology.addAtom("HW2", element_H, residue)
+            topology.addBond(atom0, atom1)
+            topology.addBond(atom0, atom2)
+            positions.append(opos)
+            positions.append(h1pos)
+            positions.append(h2pos)
+        f = open(pdbfname, "w+")
+        PDBFile.writeModel(topology,positions,file=f)
     def restart_cluster(
         self,
         options_file: str = "clust_options.dat",
